@@ -1,0 +1,11 @@
+select [Version], [Build number], [Release Date]
+,[1] as MajorVersionNumber
+,[2] as MinorVersionNumber
+,[3] as BuildVersionNumber
+from (
+select * , rowid = ROW_NUMBER() over(partition by [Build number] order by [Release Date]) 
+from SQLVersions S
+cross apply  STRING_SPLIT([Build number],'.') V
+--order by Version, [Release Date] desc
+) f
+pivot (max(value) for rowid in ([1],[2],[3]))p
