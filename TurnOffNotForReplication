@@ -1,0 +1,31 @@
+SET NOCOUNT ON; 
+DECLARE @loop INT = 1, @debug BIT = 1, @schema sysname, @table sysname, @column sysname, @status INT, @sqlStatement NVARCHAR(1000);
+DECLARE repl_cursor CURSOR FOR 
+SELECT 
+      [schema] = object_schema_name([object_id])
+    , [table] = OBJECT_NAME([object_id])
+    , [column] = [name] 
+    , IsIdNotForRepl = COLUMNPROPERTY([object_id], [name], 'IsIdNotForRepl')
+    , [--script] = 'alter table [' + object_schema_name([object_id]) + '].[' + OBJECT_NAME([object_id]) + '] alter column [' + [name] + '] DROP NOT FOR REPLICATION'
+FROM sys.columns
+        WHERE 1=1
+        AND COLUMNPROPERTY([object_id], [name], 'IsIdNotForRepl') = 1
+        AND object_schema_name([object_id]) <> 'sys'
+ORDER BY 1,2;
+
+OPEN repl_cursor;
+FETCH NEXT FROM repl_cursor INTO @schema, @table, @column, @status, @sqlStatement; 
+WHILE @@FETCH_STATUS = 0
+BEGIN
+    PRINT '--loop: ' + CAST(@loop AS VARCHAR(3)) + '; table: [' + @schema + '].[' + @table + '].[' + @column + ']; status = ' + CASE WHEN ISNULL(@status,3) = 3 THEN 'NULL' ELSE CAST(@status AS VARCHAR(2)) END; 
+    PRINT @sqlStatement + CHAR(10);
+
+    IF @debug = 0 EXECUTE(@sqlStatement);
+
+    FETCH NEXT FROM repl_cursor INTO @schema, @table, @column, @status, @sqlStatement; 
+    SET @loop +=1;
+END; 
+
+CLOSE repl_cursor;
+DEALLOCATE repl_cursor; 
+GO
