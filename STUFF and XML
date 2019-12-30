@@ -1,0 +1,12 @@
+/*
+https://stackoverflow.com/questions/31211506/how-stuff-and-for-xml-path-work-in-sql-server
+*/
+
+select T.name,  col = STUFF ((
+       SELECT ',' + C.name
+       FROM sys.columns C
+       WHERE C.object_id = OBJECT_ID(T.name)
+       ORDER BY column_id
+       FOR XML PATH('')
+), 1, 1, '') from sys.tables T 
+group by T.name
